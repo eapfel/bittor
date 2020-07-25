@@ -26,7 +26,7 @@ class ExmoApi(BitcoinApi):
         now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         since = now - timedelta(hours=hours_since_today)
         since = since.replace(hour=0, minute=0, second=0, microsecond=0)
-
+        now = now + timedelta(days=1)
         log.info(f"get historical data from {since} to {now}")
 
         return self.data_normalize(
