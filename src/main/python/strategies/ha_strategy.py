@@ -33,47 +33,6 @@ class HaStrategy:
             'ha_close': ha_close
         })
 
-    def trades(self, df):
-        current = df[1:]
-        previous = df.shift(1)[1:]
-
-        latest_bearish = current['ha_close'] < current['ha_open']
-        previous_bearish = previous['ha_close'] < previous['ha_open']
-
-        current_candle_longer = (
-                np.abs(current['ha_close'] - current['ha_open'])
-                > np.abs(previous['ha_close'] - previous['ha_open']))
-
-        current_open_eq_high = current['ha_open'] == current['ha_high']
-        current_open_eq_low = current['ha_open'] == current['ha_low']
-
-        long = (
-                latest_bearish
-                & current_candle_longer
-                & previous_bearish
-                & current_open_eq_high)
-        short = (
-                ~latest_bearish
-                & current_candle_longer
-                & ~previous_bearish
-                & current_open_eq_low)
-
-        long_exit = (
-                ~latest_bearish
-                & ~previous_bearish
-                & current_open_eq_low)
-        short_exit = (
-                latest_bearish
-                & previous_bearish
-                & current_open_eq_high)
-
-        return pd.DataFrame(
-            {'long': long,
-             'short': short,
-             'long_exit': long_exit,
-             'short_exit': short_exit},
-            index=current.index)
-
     def back_test(self, df: DataFrame, position=5000):
 
         runs = 0
@@ -85,6 +44,8 @@ class HaStrategy:
         sell_dic = []
         fee = 0.2 / 100
         stop_loss = 0
+        profit_ratio = 2 / 100
+        estimated_profit = 0
         for i in range(0, df.shape[0]):
 
             ha = df.iloc[i]
@@ -112,12 +73,14 @@ class HaStrategy:
                 btc = (position * (1 - fee)) / ha['ha_open']
                 position = 0
                 stop_loss = ha['ha_open']
-                print(f'buy {runs} -> btc:{btc}, position:{position}')
+                estimated_profit = stop_loss * (1 + profit_ratio)
+                print(
+                    f'buy {runs} -> btc:{btc}, position:{position}, stop_loss: {stop_loss}, estimated_profit: {estimated_profit}')
                 ha['buy'] = True
                 ha['sell'] = False
                 buy_dic.append(ha['ha_open'])
                 sell_dic.append(0)
-            elif (red == 1) & (not buy):
+            elif (red == 1) & (not buy) & (estimated_profit <= ha['ha_close']):
                 buy = True
                 green = 0
                 red = 0
@@ -128,17 +91,22 @@ class HaStrategy:
                 ha['buy'] = False
                 buy_dic.append(0)
                 sell_dic.append(ha['ha_close'])
-            elif (not buy) & (((stop_loss / ha['ha_close'] - 1) * 100) >= 1):
+                estimated_profit = 0
+                stop_loss = 0
+            elif (not buy) & (estimated_profit <= ha['ha_close']):
                 buy = True
                 green = 0
                 red = 0
                 position = (btc * ha['ha_close']) * (1 - fee)
                 btc = 0
-                print(f'sell {runs} -> btc:{btc}, position:{position}')
+                print(
+                    f'sell profit {runs} -> btc:{btc}, position:{position}, stop_loss: {stop_loss}, estimated_profit: {estimated_profit}')
                 ha['sell'] = True
                 ha['buy'] = False
                 buy_dic.append(0)
                 sell_dic.append(ha['ha_close'])
+                estimated_profit = 0
+                stop_loss = 0
             else:
                 buy_dic.append(0)
                 sell_dic.append(0)

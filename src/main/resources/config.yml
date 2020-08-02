@@ -4,5 +4,5 @@ markets:
     secret: "S-87e72fd2b0db2783a424f8fb2255f29c5ddc2be1"
     history: "https://api.exmo.com/v1.1/candles_history?symbol=BTC_USD&resolution=$r&from=$f&to=$t"
     #history: 'https://api.exmo.com/v1.1/candles_history?symbol=BTC_USD&resolution=5&from=1593126150&to=1593817350'
-    hours_since_today: 48
+    hours_since_today: 24
     resolution: 5
